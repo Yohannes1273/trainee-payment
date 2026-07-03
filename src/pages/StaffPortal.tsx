@@ -2,12 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Building, BookOpen, Layers, Users, ShieldAlert, Sparkles, 
-  Send, RefreshCw, LogOut, CheckCircle, ListPlus, FileText, Landmark, X, Camera
+  Send, RefreshCw, LogOut, CheckCircle, ListPlus, FileText, Landmark, X, Camera, Search
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import api from '../services/api';
 import ProfileEditor, { getAvatarUrl } from '../components/ProfileEditor';
 import ResponsiveSidebar from '../components/ResponsiveSidebar';
+import TraineeSearchDirectory from '../components/TraineeSearchDirectory';
+import AssignmentForm from '../components/AssignmentForm';
+import TrainerComplianceDashboard from '../components/TrainerComplianceDashboard';
 
 export default function StaffPortal() {
   const navigate = useNavigate();
@@ -589,6 +592,9 @@ export default function StaffPortal() {
     if (staffUser.role === 'Trainer') {
       list.push({ id: 'trainer', label: 'Section Compliance', icon: CheckCircle });
     }
+
+    // Add Trainees Directory for all staff lookup operations
+    list.push({ id: 'trainee_search', label: 'Trainees Directory', icon: Search });
 
     return list;
   };
@@ -1500,103 +1506,27 @@ export default function StaffPortal() {
           {/* TAB: Department Head assign trainers to sections */}
           {activeTab === 'dept' && (
             <div className="space-y-6">
-              <h3 className="text-xl font-bold">Link Faculty Trainers to Class Sections</h3>
-              
-              <form onSubmit={handleAssignTrainer} className="bg-slate-950 p-6 md:p-8 rounded-2xl border border-slate-800 space-y-5 max-w-md">
-                <div className="space-y-1.5">
-                  <label className="text-xs text-slate-400 block font-semibold">Select Section</label>
-                  <select 
-                    required value={linkForm.sectionId} onChange={e=>setLinkForm({...linkForm, sectionId: e.target.value})}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
-                  >
-                    <option value="">-- Choose Section --</option>
-                    {sections.map(s=><option key={s._id} value={s._id}>Section {s.name} (L-{levels.find(l=>l._id===s.levelId)?.levelNumber})</option>)}
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs text-slate-400 block font-semibold">Select Assigned Trainer</label>
-                  <select 
-                    required value={linkForm.trainerId} onChange={e=>setLinkForm({...linkForm, trainerId: e.target.value})}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
-                  >
-                    <option value="">-- Choose Faculty --</option>
-                    {trainers.map(t=><option key={t._id} value={t._id}>{t.fullName}</option>)}
-                  </select>
-                </div>
-
-                <button type="submit" className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-xl transition">
-                  Establish Relational Link
-                </button>
-              </form>
+              <AssignmentForm 
+                staffUser={staffUser}
+                departments={departments}
+                occupations={occupations}
+                programs={programs}
+                entryYears={entryYears}
+                levels={levels}
+                sections={sections}
+                trainers={trainers}
+                onSuccess={fetchHierarchyLists}
+              />
             </div>
           )}
 
           {/* TAB: Trainer assigned section compliance lists */}
           {activeTab === 'trainer' && (
             <div className="space-y-6">
-              <h3 className="text-xl font-bold">Assigned Class Section Compliance Monitoring</h3>
-              
-              {complianceData?.sections?.length === 0 ? (
-                <div className="p-8 text-center text-slate-500 bg-slate-950 rounded-2xl border border-slate-800">
-                  <ShieldAlert size={36} className="mx-auto text-slate-600 mb-2" />
-                  You have not been linked to any sections by the Department Head.
-                </div>
-              ) : (
-                complianceData?.sections?.map((sec: any) => (
-                  <div key={sec.sectionId} className="bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden">
-                    <div className="px-6 py-4 bg-slate-950 border-b border-slate-800 flex justify-between items-center">
-                      <h4 className="font-bold text-indigo-400 text-base">Section: {sec.sectionName}</h4>
-                      <p className="text-xs text-slate-400 font-mono">Total Trainees: {sec.trainees.length}</p>
-                    </div>
-
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left">
-                        <thead>
-                          <tr className="bg-slate-900 text-slate-400 text-xs font-semibold tracking-wider border-b border-slate-800">
-                            <th className="px-6 py-3">Trainee Name</th>
-                            <th className="px-6 py-3">Roll Number</th>
-                            <th className="px-6 py-3">Bot Linked</th>
-                            <th className="px-6 py-3">Settled Blocks</th>
-                            <th className="px-6 py-3">Pending Review Slips</th>
-                            <th className="px-6 py-3">Total Paid (ETB)</th>
-                            <th className="px-6 py-3">Admission State</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-800 text-sm">
-                          {sec.trainees.map((t: any) => (
-                            <tr key={t.traineeId} className="hover:bg-slate-800/20">
-                              <td className="px-6 py-4 font-semibold">{t.fullName}</td>
-                              <td className="px-6 py-4 font-mono text-xs">{t.rollNumber}</td>
-                              <td className="px-6 py-4">
-                                {t.telegramLinked ? (
-                                  <span className="text-emerald-400 text-xs font-semibold">Linked ✅</span>
-                                ) : (
-                                  <span className="text-slate-500 text-xs font-mono">No</span>
-                                )}
-                              </td>
-                              <td className="px-6 py-4 text-emerald-400 font-bold">{t.approvedPaymentsCount} blocks</td>
-                              <td className="px-6 py-4">
-                                {t.pendingVerificationCount > 0 ? (
-                                  <span className="text-amber-400 text-xs font-bold font-mono animate-pulse">{t.pendingVerificationCount} review slip(s)</span>
-                                ) : (
-                                  <span className="text-slate-500 text-xs">None</span>
-                                )}
-                              </td>
-                              <td className="px-6 py-4 font-bold">{t.totalPaidETB} ETB</td>
-                              <td className="px-6 py-4">
-                                <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                                  {t.status}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                ))
-              )}
+              <TrainerComplianceDashboard 
+                complianceData={complianceData}
+                onRefresh={fetchHierarchyLists}
+              />
             </div>
           )}
 
@@ -1901,6 +1831,11 @@ export default function StaffPortal() {
 
               </div>
             </div>
+          )}
+
+          {/* TAB: Trainees Directory Lookup Search */}
+          {activeTab === 'trainee_search' && (
+            <TraineeSearchDirectory />
           )}
 
         </section>

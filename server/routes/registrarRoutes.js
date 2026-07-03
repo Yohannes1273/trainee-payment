@@ -14,8 +14,8 @@ const router = express.Router();
 // Authenticate all routes
 router.use(authenticateToken);
 
-// Read trainees list (Accessible by Registrar)
-router.get('/trainees', requireRole(['Registrar']), getTraineesList);
+// Read trainees list (Accessible by Staff roles for Directory and lookup search)
+router.get('/trainees', requireRole(['Registrar', 'HR', 'Department Head', 'Finance', 'Night Controller', 'Trainer']), getTraineesList);
 
 // Read history log (Accessible by Registrar)
 router.get('/history', requireRole(['Registrar']), getAcademicHistory);

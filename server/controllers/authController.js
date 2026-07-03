@@ -1,6 +1,7 @@
 import User from '../models/User.js';
 import Trainee from '../models/Trainee.js';
 import Section from '../models/Section.js';
+import Department from '../models/Department.js';
 import { generateToken } from '../middleware/auth.js';
 import crypto from 'crypto';
 import Notification from '../models/Notification.js';
@@ -29,12 +30,25 @@ export async function login(req, res) {
       traineeProfile = await Trainee.findOne({ userId: user._id });
     }
 
-    // Generate token
+    // Fetch department details if user is a Department Head
+    let departmentName = '';
+    let departmentId = user.departmentId || null;
+    if (user.role === 'Department Head') {
+      const dept = await Department.findOne({ $or: [{ headId: user._id }, { _id: user.departmentId }] });
+      if (dept) {
+        departmentName = dept.name;
+        departmentId = dept._id.toString();
+      }
+    }
+
+    // Generate token with department context
     const token = generateToken({
       id: user._id,
       username: user.username,
       role: user.role,
-      fullName: user.fullName
+      fullName: user.fullName,
+      departmentId,
+      department: departmentName
     });
 
     res.json({
@@ -47,7 +61,9 @@ export async function login(req, res) {
         role: user.role,
         fullName: user.fullName,
         isPasswordChanged: user.isPasswordChanged,
-        profilePicture: user.profilePicture || null
+        profilePicture: user.profilePicture || null,
+        departmentId,
+        department: departmentName
       },
       trainee: traineeProfile
     });
@@ -68,6 +84,17 @@ export async function getCurrentUser(req, res) {
       traineeProfile = await Trainee.findOne({ userId: user._id });
     }
 
+    // Fetch department details if user is a Department Head
+    let departmentName = '';
+    let departmentId = user.departmentId || null;
+    if (user.role === 'Department Head') {
+      const dept = await Department.findOne({ $or: [{ headId: user._id }, { _id: user.departmentId }] });
+      if (dept) {
+        departmentName = dept.name;
+        departmentId = dept._id.toString();
+      }
+    }
+
     res.json({
       user: {
         id: user._id,
@@ -76,7 +103,9 @@ export async function getCurrentUser(req, res) {
         role: user.role,
         fullName: user.fullName,
         isPasswordChanged: user.isPasswordChanged,
-        profilePicture: user.profilePicture || null
+        profilePicture: user.profilePicture || null,
+        departmentId,
+        department: departmentName
       },
       trainee: traineeProfile
     });
@@ -229,12 +258,168 @@ export async function resetPassword(req, res) {
   }
 }
 
+export async function register(req, res) {
+  try {
+    const { fullName, email, role, password, departmentId, sectionId, username } = req.body;
+
+    if (!fullName || !email || !role || !password) {
+      return res.status(400).json({ error: 'Please provide all required fields: full name, email, role, password.' });
+    }
+
+    const allowedRoles = ['Registrar', 'HR', 'Department Head', 'Trainer', 'Trainee', 'Finance', 'Night Controller'];
+    if (!allowedRoles.includes(role)) {
+      return res.status(400).json({ error: `Invalid role selected. Allowed: ${allowedRoles.join(', ')}` });
+    }
+
+    // Check if email already exists
+    const emailExists = await User.findOne({ email });
+    if (emailExists) {
+      return res.status(400).json({ error: 'An account with this email address already exists.' });
+    }
+
+    // Generate or use username
+    let finalUsername = username;
+    if (!finalUsername) {
+      const nameParts = fullName.trim().split(/\s+/);
+      const first = nameParts[0]?.toLowerCase().replace(/[^a-z0-9]/g, '') || 'user';
+      const last = nameParts[nameParts.length - 1]?.toLowerCase().replace(/[^a-z0-9]/g, '') || '';
+      finalUsername = `${first}${last}`.slice(0, 10);
+      
+      // Ensure unique username
+      let counter = 1;
+      let checkUsername = finalUsername;
+      while (await User.findOne({ username: checkUsername })) {
+        checkUsername = `${finalUsername}${counter}`;
+        counter++;
+      }
+      finalUsername = checkUsername;
+    } else {
+      const exists = await User.findOne({ username: finalUsername });
+      if (exists) {
+        return res.status(400).json({ error: 'Username is already taken.' });
+      }
+    }
+
+    // Create user
+    const user = await User.create({
+      username: finalUsername,
+      password, // User save pre-hook will hash this
+      email,
+      role,
+      fullName,
+      departmentId: departmentId || null,
+      isPasswordChanged: true
+    });
+
+    // Special logic for Trainee profile
+    let traineeProfile = null;
+    if (role === 'Trainee') {
+      let targetSectionId = sectionId;
+      if (!targetSectionId) {
+        // Find any section in the system so we can register the trainee
+        const anySection = await Section.findOne();
+        if (anySection) {
+          targetSectionId = anySection._id.toString();
+        } else {
+          return res.status(400).json({ error: 'No sections exist in the TVET system. Cannot register trainee yet.' });
+        }
+      }
+
+      // Generate unique roll number
+      const randomNum = Math.floor(1000 + Math.random() * 9000);
+      const currentYear = new Date().getFullYear().toString().slice(-2);
+      const finalRollNumber = `PT/${randomNum}/${currentYear}`;
+
+      traineeProfile = await Trainee.create({
+        userId: user._id,
+        sectionId: targetSectionId,
+        rollNumber: finalRollNumber,
+        admissionStatus: 'Active'
+      });
+    }
+
+    // Special logic for Trainer / Department Head
+    if (role === 'Trainer' && departmentId) {
+      const dept = await Department.findById(departmentId);
+      if (dept) {
+        dept.trainerIds.push(user._id);
+        await dept.save();
+      }
+    } else if (role === 'Department Head' && departmentId) {
+      const dept = await Department.findById(departmentId);
+      if (dept) {
+        dept.headId = user._id;
+        await dept.save();
+      }
+    }
+
+    // Fetch department details to include in token
+    let departmentName = '';
+    if (departmentId) {
+      const dept = await Department.findById(departmentId);
+      if (dept) {
+        departmentName = dept.name;
+      }
+    }
+
+    // Generate JWT token
+    const token = generateToken({
+      id: user._id,
+      username: user.username,
+      role: user.role,
+      fullName: user.fullName,
+      departmentId: user.departmentId || null,
+      department: departmentName
+    });
+
+    res.status(201).json({
+      message: 'Account registered successfully!',
+      token,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        fullName: user.fullName,
+        isPasswordChanged: user.isPasswordChanged,
+        profilePicture: user.profilePicture || null,
+        departmentId: user.departmentId || null,
+        department: departmentName
+      },
+      trainee: traineeProfile
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
+export async function getPublicDepartments(req, res) {
+  try {
+    const list = await Department.find();
+    res.json(list);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
+export async function getPublicSections(req, res) {
+  try {
+    const list = await Section.find();
+    res.json(list);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
 const authController = {
   login,
   getCurrentUser,
   registerTrainee,
   forgotPassword,
-  resetPassword
+  resetPassword,
+  register,
+  getPublicDepartments,
+  getPublicSections
 };
 
 export default authController;

@@ -1,11 +1,144 @@
 @import "tailwindcss";
 
-@variant dark (&:where(.dark, .dark *));
-
 @layer base {
   * {
     transition-property: background-color, border-color, text-decoration-color, fill, stroke;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     transition-duration: 300ms;
   }
+}
+
+/* ==========================================================================
+   TAFARI MAKONNEN POLYTECHNIC COLLEGE THEME LAYERS
+   ========================================================================== */
+
+/* 1. Default Professional Light Theme (Slates, crisp whites, and deep navy/charcoal) */
+html {
+  background-color: #f8fafc; /* bg-slate-50 */
+  color: #1e293b; /* text-slate-800 */
+}
+
+/* 2. High-Visibility Mode (Increased contrast, slightly larger font, distinct borders) */
+.high-contrast-mode {
+  font-size: 104% !important; /* Slightly larger text for long reading sessions */
+}
+
+.high-contrast-mode,
+.high-contrast-mode body,
+.high-contrast-mode #root,
+.high-contrast-mode .bg-slate-50,
+.high-contrast-mode .bg-slate-100,
+.high-contrast-mode .bg-gray-50,
+.high-contrast-mode .bg-gray-100,
+.high-contrast-mode .bg-zinc-50,
+.high-contrast-mode .bg-slate-50\/30,
+.high-contrast-mode .bg-slate-100\/50,
+.high-contrast-mode .bg-white\/95,
+.high-contrast-mode .bg-slate-900\/95,
+.high-contrast-mode .bg-slate-900,
+.high-contrast-mode .bg-slate-950,
+.high-contrast-mode .bg-indigo-50 {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+/* High-contrast clarity: make all structural boxes white with zero fuzzy blurs/shadows */
+.high-contrast-mode .bg-white,
+.high-contrast-mode .card,
+.high-contrast-mode [class*="shadow"] {
+  background-color: #ffffff !important;
+  box-shadow: none !important;
+  border-color: #000000 !important;
+}
+
+/* Solid distinct black borders on all layout structures */
+.high-contrast-mode *,
+.high-contrast-mode .border,
+.high-contrast-mode .border-slate-100,
+.high-contrast-mode .border-slate-200,
+.high-contrast-mode .border-slate-300,
+.high-contrast-mode .border-gray-200,
+.high-contrast-mode .border-indigo-100,
+.high-contrast-mode .border-t,
+.high-contrast-mode .border-b,
+.high-contrast-mode .border-r,
+.high-contrast-mode .border-l {
+  border-color: #000000 !important;
+  border-width: 1px !important;
+}
+
+/* Absolute high-visibility text override */
+.high-contrast-mode .text-slate-800,
+.high-contrast-mode .text-slate-700,
+.high-contrast-mode .text-slate-600,
+.high-contrast-mode .text-slate-500,
+.high-contrast-mode .text-slate-400,
+.high-contrast-mode .text-gray-900,
+.high-contrast-mode .text-gray-800,
+.high-contrast-mode .text-gray-700,
+.high-contrast-mode .text-gray-600,
+.high-contrast-mode .text-gray-500,
+.high-contrast-mode .text-indigo-600,
+.high-contrast-mode .text-indigo-700,
+.high-contrast-mode .text-blue-900,
+.high-contrast-mode .text-slate-900,
+.high-contrast-mode span,
+.high-contrast-mode p,
+.high-contrast-mode h1,
+.high-contrast-mode h2,
+.high-contrast-mode h3,
+.high-contrast-mode h4,
+.high-contrast-mode th,
+.high-contrast-mode td {
+  color: #000000 !important;
+  font-weight: 500 !important; /* Slightly bolder typography for enhanced legibility */
+}
+
+/* Primary actions / buttons forced to deep navy-950 with high-contrast text and crisp borders */
+.high-contrast-mode button:not(#theme-toggle-btn),
+.high-contrast-mode .bg-indigo-600,
+.high-contrast-mode .bg-indigo-700,
+.high-contrast-mode .bg-blue-900,
+.high-contrast-mode .bg-slate-900,
+.high-contrast-mode .bg-rose-600 {
+  background-color: #0a192f !important; /* bg-navy-950 */
+  color: #ffffff !important;
+  border: 1.5px solid #000000 !important;
+  font-weight: 700 !important;
+}
+
+/* Child text items inside colored buttons */
+.high-contrast-mode button:not(#theme-toggle-btn) *,
+.high-contrast-mode .bg-indigo-600 *,
+.high-contrast-mode .bg-indigo-700 *,
+.high-contrast-mode .bg-blue-900 *,
+.high-contrast-mode .bg-rose-600 * {
+  color: #ffffff !important;
+}
+
+/* Crisp and visible forms/inputs */
+.high-contrast-mode input,
+.high-contrast-mode select,
+.high-contrast-mode textarea {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border: 1.5px solid #000000 !important;
+  opacity: 1 !important;
+}
+
+/* High-contrast badge tags */
+.high-contrast-mode .bg-emerald-50,
+.high-contrast-mode .bg-emerald-100,
+.high-contrast-mode .bg-green-50,
+.high-contrast-mode .bg-amber-50,
+.high-contrast-mode .bg-rose-50 {
+  background-color: #ffffff !important;
+  border: 1.5px solid #000000 !important;
+}
+
+.high-contrast-mode .text-emerald-700,
+.high-contrast-mode .text-green-700,
+.high-contrast-mode .text-amber-700,
+.high-contrast-mode .text-rose-700 {
+  color: #000000 !important;
 }

@@ -71,33 +71,53 @@ export default function NotificationBell() {
   }, []);
 
   // Setup SSE Real-time connection
+  const toastRef = useRef(toast);
+  const notificationsRef = useRef(notifications);
+
+  useEffect(() => {
+    toastRef.current = toast;
+  }, [toast]);
+
+  useEffect(() => {
+    notificationsRef.current = notifications;
+  }, [notifications]);
+
   useEffect(() => {
     const token = localStorage.getItem('college_payment_token');
     if (!token) return;
 
     let eventSource: EventSource | null = null;
     let reconnectTimeout: NodeJS.Timeout;
+    let isMounted = true;
 
     const connectSSE = () => {
+      if (!isMounted) return;
       const url = `/api/notifications/stream?token=${encodeURIComponent(token)}`;
       eventSource = new EventSource(url);
 
       eventSource.onopen = () => {
+        if (!isMounted) {
+          eventSource?.close();
+          return;
+        }
         console.log('[Notification Bell] Real-time SSE channel opened.');
       };
 
       eventSource.addEventListener('notification', (e: MessageEvent) => {
+        if (!isMounted) return;
         try {
           const newNotif: InAppNotification = JSON.parse(e.data);
           
           // Check if notification already exists in list to avoid duplicates
+          const exists = notificationsRef.current.some(n => n._id === newNotif._id);
+          if (exists) return;
+
+          // Trigger a beautiful visual audio-less browser toast for real-time awareness safely
+          toastRef.current.info(`🔔 ${newNotif.title}: ${newNotif.message}`);
+
           setNotifications(prev => {
-            const exists = prev.some(n => n._id === newNotif._id);
-            if (exists) return prev;
-            
-            // Trigger a beautiful visual audio-less browser toast for real-time awareness!
-            toast.info(`🔔 ${newNotif.title}: ${newNotif.message}`);
-            
+            const innerExists = prev.some(n => n._id === newNotif._id);
+            if (innerExists) return prev;
             return [newNotif, ...prev];
           });
         } catch (err) {
@@ -106,8 +126,10 @@ export default function NotificationBell() {
       });
 
       eventSource.onerror = (err) => {
+        if (!isMounted) return;
         console.warn('[Notification Bell] SSE connection errored/lost. Attempting automatic reconnection...', err);
         if (eventSource) {
+          eventSource.onerror = null;
           eventSource.close();
         }
         // Auto-reconnect after 5 seconds
@@ -118,12 +140,14 @@ export default function NotificationBell() {
     connectSSE();
 
     return () => {
+      isMounted = false;
       if (eventSource) {
+        eventSource.onerror = null;
         eventSource.close();
       }
       clearTimeout(reconnectTimeout);
     };
-  }, [toast]);
+  }, []);
 
   // Handle outside clicks to close the dropdown panel
   useEffect(() => {

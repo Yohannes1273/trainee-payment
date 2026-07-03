@@ -127,6 +127,11 @@ export default function TraineeDashboard() {
     }
   };
 
+  // Stable string representing payments list to prevent unnecessary effect executions
+  const paymentsString = JSON.stringify(
+    ledger?.payments?.map(p => ({ id: p._id, status: p.status })) || []
+  );
+
   // Auto-select most recently uploaded slip if none selected
   useEffect(() => {
     if (ledger?.payments && ledger.payments.length > 0) {
@@ -137,7 +142,7 @@ export default function TraineeDashboard() {
         setSelectedTrackedPaymentId(sorted[0]._id);
       }
     }
-  }, [ledger?.payments, selectedTrackedPaymentId]);
+  }, [paymentsString, selectedTrackedPaymentId]);
 
   // Real-time background polling for non-finalized slips
   useEffect(() => {
@@ -155,7 +160,7 @@ export default function TraineeDashboard() {
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [ledger?.payments]);
+  }, [paymentsString]);
 
   // Fetch the student's isolated ledger details
   const fetchLedger = async () => {

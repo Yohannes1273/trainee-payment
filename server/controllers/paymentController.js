@@ -474,7 +474,8 @@ export async function searchPayments(req, res) {
       entryYear, 
       program, 
       occupation, 
-      department 
+      department,
+      status
     } = req.query;
 
     // Load full relational database
@@ -570,6 +571,11 @@ export async function searchPayments(req, res) {
 
     // Now filter payments
     let matchedPayments = payments.filter(p => filteredTraineeIds.includes(p.traineeId));
+
+    // Filter by status if specified
+    if (status) {
+      matchedPayments = matchedPayments.filter(p => p.status === status);
+    }
 
     // Filter by receiptNumber (regex case-insensitive on local receipts or AI reference number)
     if (receiptNumber) {

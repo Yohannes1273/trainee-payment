@@ -36,6 +36,7 @@ const PaymentSchema = new Schema({
   // Penalty tracking
   penaltyDaysLate: { type: Number, default: 0 },
   penaltyAmount: { type: Number, default: 0 }, // 10 ETB per late day
+  trainerConfirmed: { type: Boolean, default: false }, // Physical verification confirmation by trainer
 });
 
 // Production indexing strategy for high-frequency queries and drill-downs

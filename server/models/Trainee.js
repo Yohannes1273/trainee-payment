@@ -14,6 +14,7 @@ const TraineeSchema = new Schema({
   },
   level: { type: Number, default: 1 }, // Current level number
   entryYear: { type: String, default: '' }, // Current entry year, optionally updated
+  gender: { type: String, enum: ['Male', 'Female'], default: 'Male' }, // Gender for reporting
 });
 
 TraineeSchema.plugin(softDeletePlugin);

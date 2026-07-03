@@ -86,7 +86,7 @@ export default function ResponsiveSidebar({
       window.removeEventListener('storage', syncUser);
       window.removeEventListener('profile-updated', syncUser);
     };
-  }, [user]);
+  }, [user?.fullName, user?.role, user?.username, user?.email]);
 
   const activeUser = currentUser || fallbackUser;
 
@@ -299,6 +299,14 @@ export default function ResponsiveSidebar({
 
           <div className="flex items-center gap-3">
             <NotificationBell />
+            <button
+              onClick={onLogout}
+              className="flex items-center justify-center w-10 h-10 rounded-xl bg-rose-500/10 dark:bg-rose-500/15 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white dark:hover:bg-rose-600 active:scale-95 transition-all duration-300 border border-rose-500/20 hover:border-rose-600 cursor-pointer"
+              title="Sign Out Session"
+              aria-label="Sign out"
+            >
+              <LogOut size={18} />
+            </button>
           </div>
         </header>
 

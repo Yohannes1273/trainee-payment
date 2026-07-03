@@ -5,6 +5,7 @@ import {
   registerTrainer,
   assignTrainerToSection,
   getTrainerSectionCompliance,
+  toggleTrainerConfirmation,
   getDepartments,
   createDepartment,
   getOccupations,
@@ -40,6 +41,7 @@ router.post('/assign-trainer', requireRole(['Department Head']), assignTrainerTo
 
 // Trainer viewing section compliance
 router.get('/trainer-compliance', requireRole(['Trainer']), getTrainerSectionCompliance);
+router.post('/toggle-payment-confirm', requireRole(['Trainer']), toggleTrainerConfirmation);
 
 // Read configurations (accessible by Registrar, HR, Dept Head)
 const allowedStaff = ['Registrar', 'HR', 'Department Head', 'Finance', 'Night Controller'];

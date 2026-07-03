@@ -171,7 +171,8 @@ export async function bootstrapSystem(req, res) {
       sectionId: secA._id,
       rollNumber: 'PT/1092/24',
       telegramChatId: '123456789', // test telegram chat id
-      admissionStatus: 'Active'
+      admissionStatus: 'Active',
+      gender: 'Male'
     });
 
     const trainee2 = await Trainee.create({
@@ -179,7 +180,8 @@ export async function bootstrapSystem(req, res) {
       sectionId: secB._id,
       rollNumber: 'PT/2088/25',
       telegramChatId: '987654321',
-      admissionStatus: 'Active'
+      admissionStatus: 'Active',
+      gender: 'Female'
     });
 
     // 5. Add some mock payment history to look stunning on dashboards
@@ -387,18 +389,29 @@ export async function getTrainerSectionCompliance(req, res) {
         const payments = await Payment.find({ traineeId: t._id });
         
         const pendingCount = payments.filter(p => p.status === 'Pending').length;
-        const approvedCount = payments.filter(p => p.status === 'Approved').length;
-        const totalPaid = payments.filter(p => p.status === 'Approved').reduce((acc, curr) => acc + curr.amountPaid, 0);
+        const approvedCount = payments.filter(p => ['Approved', 'Auto-Verified'].includes(p.status)).length;
+        const totalPaid = payments.filter(p => ['Approved', 'Auto-Verified'].includes(p.status)).reduce((acc, curr) => acc + curr.amountPaid, 0);
 
         studentsInfo.push({
           traineeId: t._id,
           fullName: u ? u.fullName : 'Unknown',
           rollNumber: t.rollNumber,
+          gender: t.gender || 'Male',
           telegramLinked: !!t.telegramChatId,
           approvedPaymentsCount: approvedCount,
           pendingVerificationCount: pendingCount,
           totalPaidETB: totalPaid,
-          status: t.admissionStatus
+          status: t.admissionStatus,
+          payments: payments.map(p => ({
+            _id: p._id,
+            amountPaid: p.amountPaid,
+            slipUrl: p.slipUrl,
+            status: p.status,
+            paidDate: p.paidDate,
+            trainerConfirmed: !!p.trainerConfirmed,
+            programName: p.programName,
+            levelNumber: p.levelNumber
+          }))
         });
       }
 
@@ -409,12 +422,114 @@ export async function getTrainerSectionCompliance(req, res) {
       });
     }
 
+    // Gender-Based Reporting Aggregation Pipeline
+    const sectionIds = sections.map(s => s._id.toString());
+    const genderStatsRaw = await Trainee.aggregate([
+      { $match: { sectionId: { $in: sectionIds } } },
+      {
+        $lookup: {
+          from: 'payments',
+          localField: '_id',
+          foreignField: 'traineeId',
+          as: 'payments'
+        }
+      },
+      {
+        $project: {
+          gender: { $ifNull: ['$gender', 'Male'] },
+          isPaid: {
+            $cond: {
+              if: {
+                $gt: [
+                  {
+                    $size: {
+                      $filter: {
+                        input: '$payments',
+                        as: 'p',
+                        cond: { $in: ['$$p.status', ['Approved', 'Auto-Verified']] }
+                      }
+                    }
+                  },
+                  0
+                ]
+              },
+              then: true,
+              else: false
+            }
+          }
+        }
+      },
+      {
+        $group: {
+          _id: { gender: '$gender', isPaid: '$isPaid' },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Format the results nicely
+    let totalTrainees = 0;
+    let paidMale = 0;
+    let paidFemale = 0;
+    let unpaidMale = 0;
+    let unpaidFemale = 0;
+
+    genderStatsRaw.forEach(stat => {
+      const { gender, isPaid } = stat._id;
+      const count = stat.count;
+      totalTrainees += count;
+      if (gender === 'Female') {
+        if (isPaid) paidFemale += count;
+        else unpaidFemale += count;
+      } else {
+        if (isPaid) paidMale += count;
+        else unpaidMale += count;
+      }
+    });
+
+    const genderStats = {
+      totalTrainees,
+      paidMale,
+      paidFemale,
+      unpaidMale,
+      unpaidFemale
+    };
+
     res.json({
       trainerId: req.user.id,
-      sections: list
+      sections: list,
+      genderStats
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+}
+
+/**
+ * Real-time Physical Confirmation toggle by assigned Trainer
+ */
+export async function toggleTrainerConfirmation(req, res) {
+  try {
+    const { paymentId, trainerConfirmed } = req.body;
+    
+    if (!paymentId) {
+      return res.status(400).json({ error: 'Missing paymentId parameter.' });
+    }
+
+    const payment = await Payment.findById(paymentId);
+    if (!payment) {
+      return res.status(404).json({ error: 'Payment record not found.' });
+    }
+
+    payment.trainerConfirmed = !!trainerConfirmed;
+    await payment.save();
+
+    res.json({
+      message: `Physical validation state successfully toggled to ${payment.trainerConfirmed ? 'Confirmed' : 'Unconfirmed'}.`,
+      payment
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
   }
 }
 
@@ -471,6 +586,7 @@ const setupController = {
   registerTrainee,
   assignTrainerToSection,
   getTrainerSectionCompliance,
+  toggleTrainerConfirmation,
   getDepartments,
   createDepartment,
   getOccupations,

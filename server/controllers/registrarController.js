@@ -444,7 +444,7 @@ export async function getAcademicHistory(req, res) {
 }
 
 /**
- * Fetch all registered trainees with full resolved pathways
+ * Fetch all registered trainees with full resolved pathways and payment compliance status
  */
 export async function getTraineesList(req, res) {
   try {
@@ -453,6 +453,32 @@ export async function getTraineesList(req, res) {
     for (const t of trainees) {
       const user = await User.findById(t.userId);
       const path = await resolvePathway(t.sectionId);
+      
+      let departmentName = 'N/A';
+      if (path && path.occupation) {
+        const dept = await Department.findById(path.occupation.departmentId);
+        if (dept) {
+          departmentName = dept.name;
+        }
+      }
+
+      // Compute consolidated payment status from submitted slips
+      const payments = await Payment.find({ traineeId: t._id });
+      let paymentStatus = 'Unpaid';
+      if (payments.length > 0) {
+        const hasPending = payments.some(p => ['Pending', 'Flagged for Human Review'].includes(p.status));
+        const hasRejected = payments.some(p => p.status === 'Rejected');
+        const hasApproved = payments.some(p => ['Approved', 'Auto-Verified'].includes(p.status));
+        
+        if (hasPending) {
+          paymentStatus = 'Pending';
+        } else if (hasRejected) {
+          paymentStatus = 'Rejected';
+        } else if (hasApproved) {
+          paymentStatus = 'Approved';
+        }
+      }
+
       enriched.push({
         _id: t._id,
         userId: t.userId,
@@ -464,6 +490,8 @@ export async function getTraineesList(req, res) {
         sectionName: path ? path.section.name : 'N/A',
         programName: path ? path.program.name : 'N/A',
         occupationName: path ? path.occupation.name : 'N/A',
+        departmentName,
+        paymentStatus,
         admissionStatus: t.admissionStatus || 'Active'
       });
     }

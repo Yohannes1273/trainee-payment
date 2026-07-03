@@ -319,6 +319,7 @@ Status: ${item.status}
   const [selectedOcc, setSelectedOcc] = useState('');
   const [selectedLevel, setSelectedLevel] = useState('');
   const [selectedSection, setSelectedSection] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('');
 
   // Debounced input states
   const [debouncedStudentName, setDebouncedStudentName] = useState('');
@@ -378,7 +379,8 @@ Status: ${item.status}
           department: selectedDept || undefined,
           occupation: selectedOcc || undefined,
           level: selectedLevel || undefined,
-          section: selectedSection || undefined
+          section: selectedSection || undefined,
+          status: selectedStatus || undefined
         }
       });
       setResults(response.data);
@@ -399,7 +401,8 @@ Status: ${item.status}
     selectedDept,
     selectedOcc,
     selectedLevel,
-    selectedSection
+    selectedSection,
+    selectedStatus
   ]);
 
   // Dependent cascading filters
@@ -462,6 +465,7 @@ Status: ${item.status}
     setSelectedOcc('');
     setSelectedLevel('');
     setSelectedSection('');
+    setSelectedStatus('');
   };
 
   return (
@@ -499,7 +503,7 @@ Status: ${item.status}
       </div>
 
       {/* Dynamic Multi-Criteria Search Filters */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
         
         {/* Student Name */}
         <div className="space-y-1.5 col-span-1 sm:col-span-2">
@@ -613,6 +617,26 @@ Status: ${item.status}
             {sections.map((sec) => (
               <option key={sec._id} value={sec._id}>{sec.name}</option>
             ))}
+          </select>
+        </div>
+
+        {/* Status Filter */}
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+            <ShieldCheck size={10} />
+            Status
+          </label>
+          <select
+            value={selectedStatus}
+            onChange={(e) => setSelectedStatus(e.target.value)}
+            className="w-full bg-slate-950 border border-slate-800 hover:border-slate-700 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs text-slate-100 transition focus:outline-none"
+          >
+            <option value="">All Statuses</option>
+            <option value="Pending">Pending</option>
+            <option value="Approved">Approved</option>
+            <option value="Rejected">Rejected</option>
+            <option value="Auto-Verified">Auto-Verified</option>
+            <option value="Flagged for Human Review">Flagged for Human Review</option>
           </select>
         </div>
 

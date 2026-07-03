@@ -119,7 +119,9 @@ export default function FinanceDashboard() {
   // Filter application
   const filteredPayments = payments.filter((p) => {
     const matchesSearch = p.studentName.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          p.rollNumber.toLowerCase().includes(searchQuery.toLowerCase());
+                          p.rollNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (p.status && p.status.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                          (p.traineeId && p.traineeId.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesProgram = programFilter === 'All' || p.programName === programFilter;
     const matchesLevel = levelFilter === 'All' || String(p.levelNumber) === levelFilter;
 

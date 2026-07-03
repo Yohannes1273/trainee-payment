@@ -1,0 +1,6 @@
+{
+  "name": "Trainee Payment and Receipt Management System",
+  "description": "An enterprise-grade, full-stack polytechnic college trainee payment tracking, receipt routing, block-validation, and Telegram notification system.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
